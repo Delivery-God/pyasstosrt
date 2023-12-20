@@ -20,19 +20,27 @@ class Subtitle:
 
     def __init__(
         self,
-        filepath: Union[str, os.PathLike],
+        filepath: Union[str, os.PathLike, None] = None,
+        file_content: Optional[str] = None,
         removing_effects: bool = False,
         remove_duplicates: bool = False,
     ):
-        if not isfile(filepath):
-            raise FileNotFoundError(f'"{filepath}" does not exist')
-        if isinstance(filepath, os.PathLike):
-            self.filepath: AnyStr = str(filepath)
-            self.file: AnyStr = filepath.stem
-        elif isinstance(filepath, str):
-            self.filepath: AnyStr = filepath
-            self.file: AnyStr = Path(filepath).stem
-        self.raw_text: AnyStr = self.get_text()
+        if filepath is None and file_content is None:
+            raise ValueError("Either 'filepath' or 'file_content' must be provided.")
+        
+        if filepath:
+            if not isfile(filepath):
+                raise FileNotFoundError(f'"{filepath}" does not exist')
+            if isinstance(filepath, os.PathLike):
+                self.filepath: AnyStr = str(filepath)
+                self.file: AnyStr = filepath.stem
+            elif isinstance(filepath, str):
+                self.filepath: AnyStr = filepath
+                self.file: AnyStr = Path(filepath).stem
+            self.raw_text: AnyStr = self.get_text()
+        elif file_content:
+            self.raw_text: AnyStr = file_content
+
         self.dialogues: List = []
         self.removing_effects = removing_effects
         self.is_remove_duplicates = remove_duplicates
@@ -131,13 +139,16 @@ class Subtitle:
         if output_dialogues:
             return self.dialogues
 
-        path = Path(self.filepath)
+        path = Path(self.filepath) if self.filepath else None
         file = f"{self.file}.srt"
         if output_dir:
             Path(output_dir).mkdir(parents=True, exist_ok=True)
             out_path = os.path.join(output_dir, file)
-        else:
+        elif path:
             out_path = os.path.join(path.parent, file)
+        else:
+            raise ValueError("Output directory or file path must be provided.")
         with open(out_path, encoding=encoding, mode="w") as writer:
             for dialogue in self.dialogues:
                 writer.write(str(dialogue))
+        
